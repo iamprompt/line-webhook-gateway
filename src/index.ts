@@ -1,18 +1,37 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { WebhookRequestBody } from '@line/bot-sdk'
+
+const WebhookEndpointList = [
+  'https://webhook.site/6b91908b-c7e8-4541-90ca-cfcaf66c3b87',
+  'https://webhook.site/a531b5cf-4852-4af3-b66d-b174056c677b',
+]
 
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
-	},
-} satisfies ExportedHandler<Env>;
+  async fetch(request, env, ctx): Promise<Response> {
+    // Filter only POST method
+    const { method, headers } = request
+    if (method !== 'POST') {
+      return Response.json({ message: 'Method not allowed' }, { status: 405 })
+    }
+
+    // Handle Webhook (Code Start Here)
+    const body = await request.json<WebhookRequestBody>()
+
+    // Send to Multiple Webhook Endpoint
+    await Promise.all(
+      WebhookEndpointList.map(async (url) => {
+        await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-line-signature': headers.get('x-line-signature') || '',
+            'user-agent': headers.get('user-agent') || '',
+          },
+          body: JSON.stringify(body),
+        })
+      })
+    )
+
+    // Response Success to LINE Webhook Service
+    return Response.json({ message: 'Success' })
+  },
+} satisfies ExportedHandler<Env>
