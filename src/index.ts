@@ -14,7 +14,7 @@ export default {
     }
 
     // Handle Webhook (Code Start Here)
-    const body = await request.json<WebhookRequestBody>()
+    const body = await request.arrayBuffer()
 
     // Send to Multiple Webhook Endpoint
     await Promise.all(
@@ -26,7 +26,7 @@ export default {
             'x-line-signature': headers.get('x-line-signature') || '',
             'user-agent': headers.get('user-agent') || '',
           },
-          body: JSON.stringify(body),
+          body,
         })
       })
     )
